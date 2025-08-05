@@ -1,0 +1,25 @@
+/* Hide all app sections by default */
+#loginForm,
+#registrationForm,
+#stepsForm,
+#individualLeaderboardSection,
+#groupLeaderboardSection,
+#options,
+#optionBtn,
+#logoutBtn {
+  display: none;
+}
+
+
+
+
+form {
+  text-align: left;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"] {
+  width: 50%; /* or 60%, 300px, etc */
+}
+
