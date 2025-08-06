@@ -6,7 +6,7 @@ const options = document.getElementById("optionBtn");
 const backFromOptions = document.getElementById("backBtnOptions");
 const registerNewUser = document.getElementById("registerNewUser");
 const backFromRegister = document.getElementById("backBtnRegister");
-const createNewUser = document.getElementById("createNewUser");  
+const createNewUser = document.getElementById("createNewUser");
 const savePasswordBtn = document.getElementById("saveBtnChangePassword");
 const changePasswordInput = document.getElementById("changePassword");
 const togglePasswordBtn = document.getElementById("togglePassword");
@@ -16,18 +16,49 @@ const changeGroupInput = document.getElementById("changeGroup");
 const backFromChangeGroup = document.getElementById("backBtnChangeGroup");
 const saveGroupBtn = document.getElementById("saveBtnChangeGroup");
 const toggleLoginPasswordBtn = document.getElementById("toggleLoginPassword");
-const toggleRegisterPasswordBtn = document.getElementById("toggleRegisterPassword");
+const toggleRegisterPasswordBtn = document.getElementById(
+  "toggleRegisterPassword",
+);
 const changeStepsOptions = document.getElementById("stepDate");
 const saveStepsBtn = document.getElementById("saveBtnChangeSteps");
 const changeStepsInput = document.getElementById("changeSteps");
 
+// API Configuration - Change this to your server URL
+const API_BASE_URL = "http://localhost:3000/api";
+
 let username = null;
-let users = [];
+let currentUser = null;
 
-document.getElementById("stepDate").valueAsDate = new Date();  // Shows todays date in the Calendar window
-document.getElementById("stepChangeDate").valueAsDate = new Date();  // Shows todays date in the Calendar window
+document.getElementById("stepDate").valueAsDate = new Date(); // Shows todays date in the Calendar window
+document.getElementById("stepChangeDate").valueAsDate = new Date(); // Shows todays date in the Calendar window
 
-// ----- Change between pages ----- 
+// ----- API Helper Functions -----
+
+async function apiCall(endpoint, options = {}) {
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: "include", // Include cookies for session management
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "API request failed");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
+}
+
+// ----- Change between pages -----
 
 function showOnly(...idsToShow) {
   const allSections = [
@@ -40,651 +71,534 @@ function showOnly(...idsToShow) {
     "changePasswordOptions",
     "changeGroupOptions",
     "changeStepsOptions",
-    "stepLog"
+    "stepLog",
   ];
 
-  allSections.forEach(id => {
-    const el = document.getElementById(id); // This will go through each ID in the array "allSections" above, one by one. So "id" will be "loginForm" the first loop, "stepsForm" the second loop, etc
-    if (el) el.style.display = idsToShow.includes(id) ? "block" : "none"; 
-  
-  /*
-  
-  if(el), this checks whether the element was actually found in the HTML. 
-  
-  el.style.display = idsToShow.includes(id) ? "block" : "none";    this line is where the show/hide logic happens.
-
-  "idsToShow" is the array of IDs you passed in when calling showOnly(...)
-  "idsToShow.includes(id)" checks if this current section ID should be visible.
-
-  For example, if you call
-
-  "showOnly("stepsForm", "options");" then:
-
-    "idsToShow.includes("stepsForm")" -> true -> show it
-    "idsToShow.includes("loginForm")" -> false -> hide it
-  
-  */ 
+  allSections.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = idsToShow.includes(id) ? "block" : "none";
   });
 
-  // Show or hide the logout button. "const shouldShowLogout" checks if we see "stepsForm" or "individualLeaderboardSection" or "options". If any of these are shown, it returns true 
-  const shouldShowLogout = idsToShow.includes("stepsForm") || idsToShow.includes("individualLeaderboardSection") || 
-  idsToShow.includes("options") || idsToShow.includes("changePasswordOptions") || idsToShow.includes("changeGroupOptions") || idsToShow.includes("changeStepsOptions") || idsToShow.includes("stepLog");
+  // Show or hide the logout button
+  const shouldShowLogout =
+    idsToShow.includes("stepsForm") ||
+    idsToShow.includes("individualLeaderboardSection") ||
+    idsToShow.includes("options") ||
+    idsToShow.includes("changePasswordOptions") ||
+    idsToShow.includes("changeGroupOptions") ||
+    idsToShow.includes("changeStepsOptions") ||
+    idsToShow.includes("stepLog");
 
-  // If "shouldShowLogout" is true it picks "block", else it picks "none"
-  document.getElementById("logoutBtn").style.display = shouldShowLogout ? "block" : "none";
+  document.getElementById("logoutBtn").style.display = shouldShowLogout
+    ? "block"
+    : "none";
 
- const shouldShowOptions = idsToShow.includes("stepsForm") || idsToShow.includes("individualLeaderboardSection") || 
- idsToShow.includes("options") || idsToShow.includes("changePasswordOptions") || idsToShow.includes("changeGroupOptions") || idsToShow.includes("changeStepsOptions") || idsToShow.includes("stepLog");
-  document.getElementById("optionBtn").style.display = shouldShowOptions ? "block" : "none";
-
+  const shouldShowOptions =
+    idsToShow.includes("stepsForm") ||
+    idsToShow.includes("individualLeaderboardSection") ||
+    idsToShow.includes("options") ||
+    idsToShow.includes("changePasswordOptions") ||
+    idsToShow.includes("changeGroupOptions") ||
+    idsToShow.includes("changeStepsOptions") ||
+    idsToShow.includes("stepLog");
+  document.getElementById("optionBtn").style.display = shouldShowOptions
+    ? "block"
+    : "none";
 }
 
-
-
-
-
-// ----- Login ----- 
-loginForm.addEventListener("submit", function(event) {
-  event.preventDefault(); // Stop the page from refreshing
+// ----- Login -----
+loginForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
 
   const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
   const enteredUsername = usernameInput.value.trim();
   const enteredPassword = passwordInput.value.trim();
 
+  try {
+    const response = await apiCall("/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: enteredUsername,
+        password: enteredPassword,
+      }),
+    });
 
-  // Load users from localStorage
-  users = JSON.parse(localStorage.getItem("users")) || [];
-
-  // Try to find a user with matching name and password
-  const foundUser = users.find(
-    user => user.name === enteredUsername && user.password === enteredPassword
-  );
-
-  if (foundUser) {
-    // Valid user — log them in
-    username = foundUser.name;
-    localStorage.setItem("username", username); // Keep track of who's logged in
+    // Login successful
+    username = response.user.username;
+    currentUser = response.user;
 
     console.log("User logged in:", username);
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
     showOnly("stepsForm", "individualLeaderboardSection");
-  } else {
-    // Invalid login
-    alert("Incorrect username or password. Please try again.");
+  } catch (error) {
+    alert(error.message || "Login failed. Please try again.");
     usernameInput.value = "";
     passwordInput.value = "";
   }
 });
 
-  // Toggle password visibility (Login)
-
+// Toggle password visibility (Login)
 let toggleLoginPasswordListenerAdded = false;
 
 if (!toggleLoginPasswordListenerAdded) {
   toggleLoginPasswordBtn.addEventListener("click", function () {
-    const isPassword = password.type === "password";
-    password.type = isPassword ? "text" : "password";
+    const passwordField = document.getElementById("password");
+    const isPassword = passwordField.type === "password";
+    passwordField.type = isPassword ? "text" : "password";
     toggleLoginPasswordBtn.textContent = isPassword ? "Hide" : "Show";
   });
 
   toggleLoginPasswordListenerAdded = true;
 }
 
-
-
-// ----- Register new user page ----- 
-
-registerNewUser.addEventListener("click", function(event){
-  event.preventDefault(); // stop the page from refreshing
-
+// ----- Register new user page -----
+registerNewUser.addEventListener("click", function (event) {
+  event.preventDefault();
   showOnly("registrationForm");
-
-  
-
 });
 
-
 // ----- Create new user -----
+createNewUser.addEventListener("click", async function (event) {
+  event.preventDefault();
 
-createNewUser.addEventListener("click", function(event){
-  event.preventDefault(); // stop the page from refreshing
-
-
-  // Get input elements
   const newUsernameInput = document.getElementById("newUsername");
   const newPasswordInput = document.getElementById("newPassword");
   const newGroupInput = document.getElementById("group");
 
-  // Validate element presence
   if (!newUsernameInput || !newPasswordInput || !newGroupInput) {
     alert("One or more input fields are missing.");
     return;
   }
 
-  // Read and trim values
   const newUsername = newUsernameInput.value.trim();
   const newPassword = newPasswordInput.value.trim();
   const newGroup = newGroupInput.value.trim();
 
-  // Validate values
   if (!newUsername || !newPassword || !newGroup) {
     alert("Please fill in all fields.");
     return;
   }
 
-  // Get current users list or initialize new
-  let users = JSON.parse(localStorage.getItem("users")) || [];
+  try {
+    await apiCall("/register", {
+      method: "POST",
+      body: JSON.stringify({
+        username: newUsername,
+        password: newPassword,
+        group: newGroup,
+      }),
+    });
 
-  // Check if username is already taken
-  const usernameExists = users.some(user => user.name === newUsername);
-  if (usernameExists) {
-    alert("Username already exists. Please choose another.");
-    return;
+    alert("User created successfully! Please log in.");
+    showOnly("loginForm");
+
+    // Clear inputs
+    newUsernameInput.value = "";
+    newPasswordInput.value = "";
+    newGroupInput.value = "";
+  } catch (error) {
+    alert(error.message || "Registration failed. Please try again.");
   }
-
-  // Add new user
-  users.push({
-    name: newUsername,
-    password: newPassword,
-    group: newGroup.toUpperCase(),
-    steps: 0
-  });
-
-  // Save updated users list
-  localStorage.setItem("users", JSON.stringify(users));
-
-  alert("User created successfully! Please log in.");
-
-  // Go back to login form
-  showOnly("loginForm");
-
-  // Optionally, clear inputs
-  newUsernameInput.value = "";
-  newPasswordInput.value = "";
-  newGroupInput.value = "";  
 });
 
-  // Toggle password visibility (Register)
-
+// Toggle password visibility (Register)
 let toggleRegisterPasswordListenerAdded = false;
 
 if (!toggleRegisterPasswordListenerAdded) {
   toggleRegisterPasswordBtn.addEventListener("click", function () {
-    const ispassword = newPassword.type === "password";
-    newPassword.type = ispassword ? "text" : "password";
-    toggleRegisterPasswordBtn.textContent = ispassword ? "Hide" : "Show";
+    const passwordField = document.getElementById("newPassword");
+    const isPassword = passwordField.type === "password";
+    passwordField.type = isPassword ? "text" : "password";
+    toggleRegisterPasswordBtn.textContent = isPassword ? "Hide" : "Show";
   });
 
   toggleRegisterPasswordListenerAdded = true;
 }
 
-
-// ----- Back from Register ----- 
-// When pressing the Back button, you come back to the "Add steps" window
-
-
-backFromRegister.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-      showOnly("loginForm");
-
-});
-
-
-
-// ----- Logout ----- 
-// When pressing logout, you just see the loginForm again
-
-logout.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-  localStorage.removeItem("username");  // Remove login info
-  localStorage.removeItem("password");
-
-      showOnly("loginForm");
-    
-});
-
-// ----- Options ----- 
-// When pressing the Options button, you see the options window
-
-
-
-options.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-    showOnly("options");
-
-
-
-
-// ----- Change password window -----
-
-changePasswordBtn.addEventListener("click", function(event){
+// ----- Back from Register -----
+backFromRegister.addEventListener("click", function (event) {
   event.preventDefault();
+  showOnly("loginForm");
+});
+
+// ----- Logout -----
+logout.addEventListener("click", async function (event) {
+  event.preventDefault();
+
+  try {
+    await apiCall("/logout", { method: "POST" });
+    username = null;
+    currentUser = null;
+    showOnly("loginForm");
+  } catch (error) {
+    console.error("Logout error:", error);
+    // Even if logout fails, clear local state and show login
+    username = null;
+    currentUser = null;
+    showOnly("loginForm");
+  }
+});
+
+// ----- Options -----
+options.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("options");
+
+  // ----- Change password window -----
+  changePasswordBtn.addEventListener("click", function (event) {
+    event.preventDefault();
     showOnly("changePasswordOptions");
 
     let togglePasswordListenerAdded = false;
 
-if (!togglePasswordListenerAdded) {
-    togglePasswordBtn.addEventListener("click", function () {
-      const isPassword = changePasswordInput.type === "password";
-      changePasswordInput.type = isPassword ? "text" : "password";
-      togglePasswordBtn.textContent = isPassword ? "Hide" : "Show";
-    });
+    if (!togglePasswordListenerAdded) {
+      togglePasswordBtn.addEventListener("click", function () {
+        const isPassword = changePasswordInput.type === "password";
+        changePasswordInput.type = isPassword ? "text" : "password";
+        togglePasswordBtn.textContent = isPassword ? "Hide" : "Show";
+      });
 
-    togglePasswordListenerAdded = true;
-  }
+      togglePasswordListenerAdded = true;
+    }
+  });
 });
 
-});
-
-backFromChangePassword.addEventListener("click", function(event){
+backFromChangePassword.addEventListener("click", function (event) {
   event.preventDefault();
-    showOnly("options");
-
+  showOnly("options");
 });
 
 // ----- Save new password -----
-
-savePasswordBtn.addEventListener("click", function (event) {
+savePasswordBtn.addEventListener("click", async function (event) {
   event.preventDefault();
 
-  if(changePasswordInput.value.trim() === ""){
-    
-  // You can still reference `changePasswordInput` here because it's in outer scope
-  console.log("The password cannot be blank!");
-
-  }
-  else {
-
-    console.log("New password is:", changePasswordInput.value);
-    changePasswordInput.value = "";
-  }
-
-});
-
-
-// ----- Change group window -----
-
-changeGroupBtn.addEventListener("click", function(event){
-  event.preventDefault();
-    showOnly("changeGroupOptions");
-
-});
-
-backFromChangeGroup.addEventListener("click", function(event){
-  event.preventDefault();
-    showOnly("options");
-
-});
-
-// ----- Save new group -----
-
-saveGroupBtn.addEventListener("click", function (event) {
-  event.preventDefault();
-
-  if(changeGroupInput.value.trim() === ""){
-    
-  
-  console.log("The group name cannot be blank!");
-
-  }
-  else {
-    
-    console.log("New group is:", changeGroupInput.value.toUpperCase()); // Only uppercase is allowed
-    changeGroupInput.value = "";
-  }
-
-});
-
-
-
-// ----- Change steps window -----
-
-changeStepsBtn.addEventListener("click", function(event){
-  event.preventDefault();
-    showOnly("changeStepsOptions", "stepLog");
-    showStepLogDisplay();
-
-});
-
-backBtnChangeSteps.addEventListener("click", function(event){
-  event.preventDefault();
-    showOnly("options");
-
-});
-
-function showStepLogDisplay() {
-  const stepLog = JSON.parse(localStorage.getItem("stepLog")) || {};
-  const displayDiv = document.getElementById("stepLogDisplay");
-
-  if (Object.keys(stepLog).length === 0) {
-    displayDiv.innerHTML = "<p>No steps logged yet.</p>";
+  if (changePasswordInput.value.trim() === "") {
+    alert("The password cannot be blank!");
     return;
   }
 
-  // ✅ Sort the dates chronologically
-  const sortedDates = Object.keys(stepLog).sort();
+  try {
+    await apiCall("/user/password", {
+      method: "PUT",
+      body: JSON.stringify({
+        newPassword: changePasswordInput.value.trim(),
+      }),
+    });
 
-  // Build HTML output
-  let output = "<ul>";
-  for (const date of sortedDates) {
-    output += `<li><strong>${date}</strong>: ${stepLog[date]} steps</li>`;
+    alert("Password updated successfully!");
+    changePasswordInput.value = "";
+    showOnly("options");
+  } catch (error) {
+    alert(error.message || "Failed to update password");
   }
-  output += "</ul>";
+});
 
-  displayDiv.innerHTML = output;
+// ----- Change group window -----
+changeGroupBtn.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("changeGroupOptions");
+});
+
+backFromChangeGroup.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("options");
+});
+
+// ----- Save new group -----
+saveGroupBtn.addEventListener("click", async function (event) {
+  event.preventDefault();
+
+  if (changeGroupInput.value.trim() === "") {
+    alert("The group name cannot be blank!");
+    return;
+  }
+
+  try {
+    await apiCall("/user/group", {
+      method: "PUT",
+      body: JSON.stringify({
+        newGroup: changeGroupInput.value.trim(),
+      }),
+    });
+
+    alert("Group updated successfully!");
+    changeGroupInput.value = "";
+    showOnly("options");
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
+  } catch (error) {
+    alert(error.message || "Failed to update group");
+  }
+});
+
+// ----- Change steps window -----
+changeStepsBtn.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("changeStepsOptions", "stepLog");
+  showStepLogDisplay();
+});
+
+backBtnChangeSteps.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("options");
+});
+
+async function showStepLogDisplay() {
+  try {
+    const response = await apiCall("/steps");
+    const stepLog = response.stepLog || {};
+    const displayDiv = document.getElementById("stepLogDisplay");
+
+    if (Object.keys(stepLog).length === 0) {
+      displayDiv.innerHTML = "<p>No steps logged yet.</p>";
+      return;
+    }
+
+    // Sort the dates chronologically
+    const sortedDates = Object.keys(stepLog).sort();
+
+    // Build HTML output
+    let output = "<ul>";
+    for (const date of sortedDates) {
+      output += `<li><strong>${date}</strong>: ${stepLog[date]} steps</li>`;
+    }
+    output += "</ul>";
+
+    displayDiv.innerHTML = output;
+  } catch (error) {
+    console.error("Error loading step log:", error);
+    document.getElementById("stepLogDisplay").innerHTML =
+      "<p>Error loading step log.</p>";
+  }
 }
 
-
-
-
-
 // ----- Save steps -----
-
-saveStepsBtn.addEventListener("click", function (event) {
+saveStepsBtn.addEventListener("click", async function (event) {
   event.preventDefault();
 
   const date = document.getElementById("stepChangeDate").value;
   const steps = parseInt(document.getElementById("changeSteps").value);
-
-
 
   if (!date || isNaN(steps)) {
     alert("Please enter both a valid date and number of steps.");
     return;
   }
 
-// Get current step log or create a new object (empty)
+  try {
+    await apiCall("/steps", {
+      method: "POST",
+      body: JSON.stringify({
+        date: date,
+        steps: steps,
+      }),
+    });
 
-  const stepLog = JSON.parse(localStorage.getItem("stepLog")) || {};
+    alert(`✅ Updated ${steps} steps for ${date}`);
 
-// Overwrite steps for the selected date
+    // Reset form
+    document.getElementById("changeSteps").value = "";
+    document.getElementById("stepChangeDate").value = "";
 
-  stepLog[date] = steps;
-
-// Save updated step log back to localStorage
-
-  localStorage.setItem("stepLog", JSON.stringify(stepLog));
-
-// Recalculate total steps for current user
-
-  const totalSteps = Object.values(stepLog).reduce((sum, val) => sum + val, 0);
-
-// Update user in users array
-
-  let users = JSON.parse(localStorage.getItem("users")) || [];
-  const userIndex = users.findIndex(u => u.name === username);
-
-  if (userIndex !== -1) {
-    users[userIndex].steps = totalSteps;
-    localStorage.setItem("users", JSON.stringify(users));
+    // Refresh displayed step log and leaderboards
+    await showStepLogDisplay();
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
+  } catch (error) {
+    alert(error.message || "Failed to save steps");
   }
-
-// Show confirmation
-
-  alert(`✅ Updated ${steps} steps for ${date}`);
-
-// Reset form
-  document.getElementById("changeSteps").value = "";
-  document.getElementById("stepChangeDate").value = "";
-
-// Refresh displayed step log
-  showStepLogDisplay();
-  updateIndividualLeaderboard();
-  updateGroupLeaderboard();
 });
 
-
-
-
-
-// ----- Back from Options ----- 
-// When pressing the Back button, you come back to the "Add steps" window
-
-
-backFromOptions.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-      showOnly("stepsForm", "individualLeaderboardSection");
-
+// ----- Back from Options -----
+backFromOptions.addEventListener("click", function (event) {
+  event.preventDefault();
+  showOnly("stepsForm", "individualLeaderboardSection");
 });
 
+// ----- Step input -----
+stepsForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
 
-
-// ----- Step input ----- 
-  updateIndividualLeaderboard();
-  updateGroupLeaderboard(); // Shows the current leaderboard
-
-stepsForm.addEventListener("submit", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-  
- 
-
-  if (!username) {  // If username is not found in the localStorage, then the user cannot add steps
+  if (!username) {
     alert("You're not logged in!");
     return;
   }
 
-  const stepsInput = document.getElementById("steps"); // Grabs the input data in the "steps" input box
-  const steps = parseInt(stepsInput.value); // Reads the value, parses (removed decimals) and adds it to steps
+  const stepsInput = document.getElementById("steps");
+  const steps = parseInt(stepsInput.value);
   const date = document.getElementById("stepDate").value;
 
-    if (!steps || !date) {
+  if (!steps || !date) {
     alert("Please enter both steps and a date.");
     return;
   }
 
-  // Show confirmation
-  document.getElementById("stepFeedback").textContent = `✅ You logged ${steps} steps for ${date}`;
-
-
-  // Log the steps to later show in Option to allow for editing
-
-let stepLog = JSON.parse(localStorage.getItem("stepLog")) || {};
-stepLog[date] = steps;
-localStorage.setItem("stepLog", JSON.stringify(stepLog));
-
-
-  if (!isNaN(steps) && steps > 0) { // If steps is not NaN and steps is higher than 0, then this will run
-    users = JSON.parse(localStorage.getItem("users")) || []; // Loads the users from the localStorage. JSON.parse() turns the saved string back into an array of user objects
-
-    let userIndex = users.findIndex(u => u.name === username); // This finds the position of the current user in the array. If it returns -1, the user doesn't exist yet
-      
-      if (userIndex !== -1) { // If the user is found, it will not show -1 and therefore run this
-        users[userIndex].steps += steps; // This adds the steps to their total
-      } else {
-        users.push({ name: username, steps }); // If the user was not found, add a new object with their name and step count
-      }
-
-    localStorage.setItem("users", JSON.stringify(users)); // Save the updated list of users back to localStorage. JSON.stringigy() converts the object into a string so it can be stored
-
-  updateIndividualLeaderboard();
-  updateGroupLeaderboard(); // Updates the leaderboard with the added steps, See function updateLeaderboard()
-
-
+  if (isNaN(steps) || steps <= 0) {
+    alert("Please enter a valid number of steps.");
+    return;
   }
 
+  try {
+    await apiCall("/steps", {
+      method: "POST",
+      body: JSON.stringify({
+        date: date,
+        steps: steps,
+      }),
+    });
 
-  stepsInput.value = ""; // Clear input
+    // Show confirmation
+    document.getElementById("stepFeedback").textContent =
+      `✅ You logged ${steps} steps for ${date}`;
+
+    // Update leaderboards
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
+
+    stepsInput.value = ""; // Clear input
+  } catch (error) {
+    alert(error.message || "Failed to add steps");
+  }
 });
 
+// ----- Update individual leaderboard function -----
+async function updateIndividualLeaderboard() {
+  try {
+    const response = await apiCall("/leaderboard/individual");
+    const users = response.leaderboard || [];
 
-// ----- Update individual leaderboard function ----- 
+    const individualLeaderboardBody = document.querySelector(
+      "#individualLeaderboard tbody",
+    );
+    individualLeaderboardBody.innerHTML = "";
 
-function updateIndividualLeaderboard() {
-  const individualLeaderboardBody = document.querySelector("#individualLeaderboard tbody"); // This finds the <tbody> inside the table with id = "individualLeaderboard". This is where the rows with each user will be shown
-  individualLeaderboardBody.innerHTML = ""; // Clears out any previous content inside the leaderboard table. This is important to avoid duplicating rows every time you update the list
-
-  users = JSON.parse(localStorage.getItem("users")) || []; // Loads the users array from localStorage. JSON.parse() converts the saved string back into a real JavaScript array.
-  // "|| []" is a fallback in case there's no data saved yet (like on the first visit)
-
-  users.sort((a, b) => b.steps - a.steps); // Sorts the user array from highest to lowest step count. If b.steps is greater than a.steps, b comes first
-
-  users.forEach((user, index) => { // Loops through each user in the sorted array. "user" is the object. "index" is the position in the array (0 for first, 1 for second, etc.)
-    const row = document.createElement("tr"); // Creates a new table row <tr> to hold the user's data
-    row.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${user.name}</td>
-      <td>${user.steps}</td>
-    `;  // Fills the row with HTML. Rank number: ${index + 1} (since arrays start at 0)
-
-/*
-Example: 
-<tr>
-  <td>1</td>
-  <td>Anna</td>
-  <td>2500</td>
-</tr>
-*/
-    individualLeaderboardBody.appendChild(row); // Adds the finished row to the <tbody> in the leaderboard table. This repeats for every user.
-  });
+    users.forEach((user, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${user.username}</td>
+        <td>${user.total_steps}</td>
+      `;
+      individualLeaderboardBody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error updating individual leaderboard:", error);
+  }
 }
 
+// ----- Update group leaderboard function -----
+async function updateGroupLeaderboard() {
+  try {
+    const response = await apiCall("/leaderboard/group");
+    const groups = response.leaderboard || [];
 
-// ----- Update group leaderboard function ----- 
+    const groupLeaderboardBody = document.querySelector(
+      "#groupLeaderboard tbody",
+    );
+    groupLeaderboardBody.innerHTML = "";
 
-function updateGroupLeaderboard() {
-  const groupLeaderboardBody = document.querySelector("#groupLeaderboard tbody"); // This finds the <tbody> inside the table with id = "groupLeaderboard". This is where the rows with each user will be shown
-  groupLeaderboardBody.innerHTML = ""; // Clears out any previous content inside the leaderboard table. This is important to avoid duplicating rows every time you update the list
-
-  const users = JSON.parse(localStorage.getItem("users")) || []; // Loads the users array from localStorage. JSON.parse() converts the saved string back into a real JavaScript array.
-  // "|| []" is a fallback in case there's no data saved yet (like on the first visit)
-
-// Step 1: Sum steps per group
-  const groupStepsMap = {};
-
-  users.forEach(user => {
-    const groupName = user.group;
-    if (!groupName) return; // Skip users without a group
-    if (!groupStepsMap[groupName]) {
-      groupStepsMap[groupName] = 0;
-    }
-    groupStepsMap[groupName] += user.steps;
-  });
-
-  // Step 2: Convert map to array
-  const groupStepsArray = Object.entries(groupStepsMap).map(([name, steps]) => ({
-    name,
-    steps
-  }));
-
-  // Step 3: Sort descending by steps
-  groupStepsArray.sort((a, b) => b.steps - a.steps); // Sorts the user array from highest to lowest step count. If b.steps is greater than a.steps, b comes first
-
-
-  // Step 4: Render leaderboard
-
-  groupStepsArray.forEach((group, index) => { // Loops through each user in the sorted array. "user" is the object. "index" is the position in the array (0 for first, 1 for second, etc.)
-    const row = document.createElement("tr"); // Creates a new table row <tr> to hold the user's data
-    row.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${group.name}</td>
-      <td>${group.steps}</td>
-    `;  // Fills the row with HTML. Rank number: ${index + 1} (since arrays start at 0)
-
-/*
-Example: 
-<tr>
-  <td>1</td>
-  <td>Anna</td>
-  <td>2500</td>
-</tr>
-*/
-    groupLeaderboardBody.appendChild(row); // Adds the finished row to the <tbody> in the leaderboard table. This repeats for every user.
-  });
+    groups.forEach((group, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${group.group_name}</td>
+        <td>${group.total_steps}</td>
+      `;
+      groupLeaderboardBody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error updating group leaderboard:", error);
+  }
 }
 
-
-// ----- Clear individual leaderboard (localStorage) ----- 
+// ----- Clear individual leaderboard -----
 const clearIndividualBtn = document.getElementById("clearIndividualBtn");
-clearIndividualBtn.addEventListener("click", function () {
+clearIndividualBtn.addEventListener("click", async function () {
+  if (
+    !confirm(
+      "Are you sure you want to clear the individual leaderboard? This cannot be undone.",
+    )
+  ) {
+    return;
+  }
 
-  let users = JSON.parse(localStorage.getItem("users")) || [];
-
-
-  // Set all users' steps to 0
-  users = users.map(user => ({
-    ...user,
-    steps: 0
-
-
-  }));
-
-  // Save updated users back to localStorage
-  localStorage.setItem("users", JSON.stringify(users));
-
-  // Update the leaderboards
-  updateIndividualLeaderboard();
-  updateGroupLeaderboard();
+  try {
+    await apiCall("/leaderboard/individual", { method: "DELETE" });
+    alert("Individual leaderboard cleared successfully!");
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
+  } catch (error) {
+    alert(error.message || "Failed to clear leaderboard");
+  }
 });
 
-
-// ----- Clear group leaderboard (localStorage) ----- 
+// ----- Clear group leaderboard -----
 const clearGroupBtn = document.getElementById("clearGroupBtn");
-clearGroupBtn.addEventListener("click", function () {
+clearGroupBtn.addEventListener("click", async function () {
+  if (
+    !confirm(
+      "Are you sure you want to clear the group leaderboard? This cannot be undone.",
+    )
+  ) {
+    return;
+  }
 
-  let users = JSON.parse(localStorage.getItem("users")) || [];
-
-
-  // Set all users' steps to 0
-  users = users.map(user => ({
-    ...user,
-    steps: 0
-
-
-  }));
-
-  // Save updated users back to localStorage
-  localStorage.setItem("users", JSON.stringify(users));
-
-  // Update the leaderboards
-  updateIndividualLeaderboard();
-  updateGroupLeaderboard();
+  try {
+    await apiCall("/leaderboard/group", { method: "DELETE" });
+    alert("Group leaderboard cleared successfully!");
+    await updateIndividualLeaderboard();
+    await updateGroupLeaderboard();
+  } catch (error) {
+    alert(error.message || "Failed to clear leaderboard");
+  }
 });
 
-
-
-
-// ----- Show group leaderboard ----- 
-
+// ----- Show group leaderboard -----
 const showGroupBtn = document.getElementById("showGroupBtn");
 
-showGroupBtn.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-  document.getElementById("individualLeaderboardSection").style.display = "none";
+showGroupBtn.addEventListener("click", function (event) {
+  event.preventDefault();
+  document.getElementById("individualLeaderboardSection").style.display =
+    "none";
   document.getElementById("groupLeaderboardSection").style.display = "block";
-  
+
   updateIndividualLeaderboard();
   updateGroupLeaderboard();
 });
 
-  
+// ----- Show individual leaderboard -----
+const showIndividualBtnFromGroup = document.getElementById(
+  "showIndividualBtnFromGroup",
+);
 
-// ----- Show individual leaderboard ----- 
-
-const showIndividualBtnFromGroup  = document.getElementById("showIndividualBtnFromGroup");
-
-showIndividualBtnFromGroup.addEventListener("click", function(event) {
-  event.preventDefault(); // stop the page from refreshing
-  document.getElementById("individualLeaderboardSection").style.display = "block";
+showIndividualBtnFromGroup.addEventListener("click", function (event) {
+  event.preventDefault();
+  document.getElementById("individualLeaderboardSection").style.display =
+    "block";
   document.getElementById("groupLeaderboardSection").style.display = "none";
 
   updateIndividualLeaderboard();
   updateGroupLeaderboard();
 });
 
+// ----- Auto-login check on page load -----
+window.addEventListener("load", async function () {
+  try {
+    const response = await apiCall("/auth/check");
 
-// ----- Auto-login if user is still stored in localStorage, if they closed the browser without pressing logout (because logout is set to clear the localStorage) -----   
+    if (response.authenticated) {
+      username = response.username;
+      console.log("User already authenticated:", username);
 
-window.addEventListener("load", function () {
-  const storedUsername = localStorage.getItem("username");
-  if (storedUsername) {
-    username = storedUsername;
-
-    console.log("Restored user:", username);
-
-    // Optionally: show the app directly
-    showOnly("stepsForm", "individualLeaderboardSection");
-  } else {
+      await updateIndividualLeaderboard();
+      await updateGroupLeaderboard();
+      showOnly("stepsForm", "individualLeaderboardSection");
+    } else {
+      showOnly("loginForm");
+    }
+  } catch (error) {
+    console.error("Auth check failed:", error);
     showOnly("loginForm");
   }
 });
-

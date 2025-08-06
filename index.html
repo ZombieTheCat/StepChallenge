@@ -1,170 +1,215 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>Step Challenge Tracker</title>
-<link rel="stylesheet" href="style.css" />
+  <head>
+    <meta charset="UTF-8" />
+    <title>Step Challenge Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Step Challenge 2025</h1>
+      <div class="header-buttons">
+        <button id="optionBtn">Options</button>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </header>
 
-<style>
-  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f7f7f7;display:flex;flex-direction:column;align-items:center;}
-  header{background:#4caf50;color:#fff;width:100%;padding:1rem;text-align:center;}
-  main{width:100%;max-width:600px;padding:1rem;}
-  form{background:#fff;margin:1rem 0;padding:1rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);}
-  table{width:100%;border-collapse:collapse;}
-  th,td{padding:.5rem;border-bottom:1px solid #ddd;text-align:left;}
-  tr.highlight{background:#e8f5e9;font-weight:bold;}
-  button{background:#4caf50;color:#fff;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;}
-  input[type="number"],input[type="text"]{padding:.5rem;border:1px solid #ccc;border-radius:4px;}
-</style>
-</head>
-<body>
-<header>
-  <h1> Step Challenge 2025 </h1>
-<div style="position:absolute; top:1rem; right:1rem; display:flex; gap:0.5rem;">
-  <button id="optionBtn">Options</button>
-  <button id="logoutBtn">Logout</button>
-</div>
+    <main>
+      <!-- Login -->
+      <form id="loginForm">
+        <h2>Welcome!</h2>
+        <label for="username">Username:</label> <br />
+        <input
+          id="username"
+          type="text"
+          required
+          placeholder="Enter your username"
+        /><br /><br />
+        <label for="password">Password:</label> <br />
+        <input
+          id="password"
+          type="password"
+          required
+          placeholder="Enter your password"
+          autocomplete="off"
+        />
+        <button id="toggleLoginPassword" type="button">Show</button>
+        <br /><br />
 
-</header>
+        <div class="button-row">
+          <button id="enter" type="submit">Enter</button>
+          <button id="registerNewUser" type="button">Register new user</button>
+        </div>
 
+        <p id="loginFeedback"></p>
+      </form>
 
-<main>
-  <!-- Login -->
-  <form id="loginForm">
-    <h2>Welcome!</h2>
-    <label for="username">Username:</label> <br>
-    <input id="username" type="text" required placeholder="Enter your username" autocomplete="off"/><br><br>
-    <label for="password">Password:</label> <br>
-    <input id="password" type="password" required placeholder="Enter your password" autocomplete="off"/>
-    <button id="toggleLoginPassword" type="button">Show</button> <br><br>
+      <!-- Step entry -->
+      <form id="stepsForm" style="display: none">
+        <h2>Add steps</h2>
+        <p id="welcome"></p>
+        <label for="steps">Steps walked:</label><br />
+        <input
+          id="steps"
+          type="number"
+          min="1"
+          required
+          placeholder="Enter your steps"
+          autocomplete="off"
+        /><br /><br />
 
-      <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
-      <button id="enter" type="submit">Enter</button>
-      <button id="registerNewUser" type="button">Register new user</button>
-    </div>
+        <label for="stepDate">Date:</label><br />
+        <input id="stepDate" type="date" required /><br /><br />
 
-    <p id="loginFeedback"></p>
-  </form>
+        <div class="button-container">
+          <button type="submit">Add</button>
+        </div>
+        <p id="stepFeedback"></p>
+      </form>
 
-  <!-- Step entry -->
-  <form id="stepsForm" style="display:none;">
-    <h2>Add steps</h2>
-    <p id="welcome"></p>
-    <label for="steps">Steps walked:</label><br>
-    <input id="steps" type="number" min="1" required placeholder="Enter your steps" autocomplete="off"/><br><br>
+      <!-- Individual Leaderboard -->
+      <section id="individualLeaderboardSection" style="display: none">
+        <h2>Individual Leaderboard</h2>
+        <button id="clearIndividualBtn" type="button">Clear leaderboard</button>
+        <button id="showIndividualBtn">Individual leaderboard</button>
+        <button id="showGroupBtn">Group leaderboard</button><br /><br />
+        <table id="individualLeaderboard">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Total Steps</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
 
-    <label for="stepDate">Date:</label><br>
-    <input id="stepDate" type="date" required /><br><br>
+      <!-- Group Leaderboard --->
+      <section id="groupLeaderboardSection" style="display: none">
+        <h2>Group Leaderboard</h2>
+        <button id="clearGroupBtn" type="button">Clear leaderboard</button>
+        <button id="showIndividualBtnFromGroup">Individual leaderboard</button>
+        <button id="showGroupBtn">Group leaderboard</button><br /><br />
+        <table id="groupLeaderboard">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Group</th>
+              <th>Total Steps</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
 
-          <div style="display: flex;">
-      <button type="submit">Add</button>
-    </div>
-    <p id="stepFeedback"></p>
-  </form>
+      <!-- Options --->
+      <form id="options" style="display: none">
+        <h2>Options</h2>
+        <button id="changePasswordBtn" type="button">Change password</button>
+        <br /><br />
+        <button id="changeGroupBtn" type="button">Change group</button>
+        <br /><br />
+        <button id="changeStepsBtn" type="button">Change steps</button>
+        <br /><br />
+        <div class="button-row">
+          <button id="backBtnOptions" type="button">Back</button>
+          <button id="saveBtnOptions" type="submit">Save</button>
+        </div>
+      </form>
 
-  <!-- Individual Leaderboard -->
-  <section id="individualLeaderboardSection" style="display:none;">
-    <h2>Individual Leaderboard</h2>
-    <button id="clearIndividualBtn" type="button">Clear leaderboard</button>
-    <button id="showIndividualBtn">Individual leaderboard</button>
-    <button id="showGroupBtn">Group leaderboard</button><br><br>
-    <table id="individualLeaderboard">
-      <thead>
-        <tr><th>#</th><th>Name</th><th>Total Steps</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+      <!-- Change password --->
+      <form id="changePasswordOptions" style="display: none">
+        <h2>Change password</h2>
+        <input
+          id="changePassword"
+          type="password"
+          required
+          placeholder="Enter new password"
+        />
+        <button id="togglePassword" type="button">Show</button> <br /><br />
 
-    <!-- Group Leaderboard --->
-  <section id="groupLeaderboardSection" style="display:none;">
-    <h2>Group Leaderboard</h2>
-    <button id="clearGroupBtn" type="button">Clear leaderboard</button>
-    <button id="showIndividualBtnFromGroup">Individual leaderboard</button>
-    <button id="showGroupBtn">Group leaderboard</button><br><br>
-    <table id="groupLeaderboard">
-      <thead>
-        <tr><th>#</th><th>Group</th><th>Total Steps</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+        <div class="button-row">
+          <button id="backBtnChangePassword" type="button">Back</button>
+          <button id="saveBtnChangePassword" type="submit">Save</button>
+        </div>
+      </form>
 
+      <!-- Change group --->
+      <form id="changeGroupOptions" style="display: none">
+        <h2>Change group</h2>
+        <input
+          id="changeGroup"
+          type="text"
+          required
+          placeholder="Enter new group: "
+          autocomplete="off"
+        />
 
-    <!-- Options --->
-<form id="options" style="display:none;">
-  <h2>Options</h2>
-  <button id="changePasswordBtn" type="button">Change password</button> <br><br>
-  <button id="changeGroupBtn" type="button">Change group</button> <br><br>
-  <button id="changeStepsBtn" type="button">Change steps</button> <br><br>
-  <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-    <button id="backBtnOptions" type="button">Back</button>
-    <button id="saveBtnOptions" type="submit">Save</button>
-  </div>
-</form>
+        <div class="button-row">
+          <button id="backBtnChangeGroup" type="button">Back</button>
+          <button id="saveBtnChangeGroup" type="submit">Save</button>
+        </div>
+      </form>
 
-    <!-- Change password --->
-<form id="changePasswordOptions" style="display:none;">
-  <h2>Change password</h2>
-  <input id="changePassword" type="password" required placeholder="Enter new password"/>
-  <button id="togglePassword" type="button">Show</button> <br><br>
-
-  <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-    <button id="backBtnChangePassword" type="button">Back</button>
-    <button id="saveBtnChangePassword" type="submit">Save</button>
-  </div>
-</form>
-
-    <!-- Change group --->
-<form id="changeGroupOptions" style="display:none;">
-  <h2>Change group</h2>
-  <input id="changeGroup" type="text" required placeholder="Enter new group: "  autocomplete="off"/>
-
-  <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-    <button id="backBtnChangeGroup" type="button">Back</button>
-    <button id="saveBtnChangeGroup" type="submit">Save</button>
-  </div>
-</form>
-
-    <!-- Change steps --->
-<form id="changeStepsOptions" style="display:none;">
-  <h2>Change steps</h2>
-  <input id="changeSteps" type="text" required placeholder="Enter amount of steps: "  autocomplete="off"/><br><br>
-    <label for="stepChangeDate">Date:</label><br>
-    <input id="stepChangeDate" type="date" required /><br><br>
-  <div id="stepLogDisplay" style="margin-bottom: 1rem;"></div>  <!-- Steps Calendar -->
-  <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-    <button id="backBtnChangeSteps" type="button">Back</button>
-    <button id="saveBtnChangeSteps" type="submit">Save</button>
-  </div>
-</form>
-
-
-
-
-
+      <!-- Change steps --->
+      <form id="changeStepsOptions" style="display: none">
+        <h2>Change steps</h2>
+        <input
+          id="changeSteps"
+          type="text"
+          required
+          placeholder="Enter amount of steps: "
+          autocomplete="off"
+        /><br /><br />
+        <label for="stepChangeDate">Date:</label><br />
+        <input id="stepChangeDate" type="date" required /><br /><br />
+        <div id="stepLogDisplay" class="step-log-display"></div>
+        <!-- Steps Calendar -->
+        <div class="button-row">
+          <button id="backBtnChangeSteps" type="button">Back</button>
+          <button id="saveBtnChangeSteps" type="submit">Save</button>
+        </div>
+      </form>
 
       <!-- Register new user --->
-  <form id="registrationForm">
-    <h2>Register new user</h2>
-    <label for="newUsername">Username:</label><br>
-    <input id="newUsername" type="text" required placeholder="Enter your name" autocomplete="off"/> <br><br>
-    <label for="newPassword">Password:</label><br>
-    <input id="newPassword" type="password" required placeholder="Enter your password" autocomplete="off"/>
-    <button type="button" id="toggleRegisterPassword">Show</button> <br><br>
-    <label for="group">Group:</label><br>
-    <input id="group" type="text" required placeholder="Enter your group (for example KN)" autocomplete="off"/><br><br>
+      <form id="registrationForm">
+        <h2>Register new user</h2>
+        <label for="newUsername">Username:</label><br />
+        <input
+          id="newUsername"
+          type="text"
+          required
+          placeholder="Enter your name"
+          autocomplete="off"
+        />
+        <br /><br />
+        <label for="newPassword">Password:</label><br />
+        <input
+          id="newPassword"
+          type="password"
+          required
+          placeholder="Enter your password"
+          autocomplete="off"
+        />
+        <button type="button" id="toggleRegisterPassword">Show</button>
+        <br /><br />
+        <label for="group">Group:</label><br />
+        <input
+          id="group"
+          type="text"
+          required
+          placeholder="Enter your group (for example KN)"
+          autocomplete="off"
+        /><br /><br />
 
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-    <button id="backBtnRegister" type="button">Back</button>
-    <button id="createNewUser" type="submit">Create</button>    
-    </div>
-  </form>
+        <div class="button-row">
+          <button id="backBtnRegister" type="button">Back</button>
+          <button id="createNewUser" type="submit">Create</button>
+        </div>
+      </form>
+    </main>
 
-
-</main>
-
-<script src="script.js"></script>
-
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>
