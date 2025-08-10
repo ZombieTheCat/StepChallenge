@@ -25,7 +25,6 @@ jobs:
             git pull
             npm ci
             cd server/
-            npm start
             pm2 stop server
             pm2 delete server
             pm2 start "npm start" --name server
